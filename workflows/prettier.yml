@@ -1,0 +1,42 @@
+name: Prettier Formatter
+
+on: [push, pull_request]
+
+jobs:
+  prettier:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ github.head_ref }}
+        fetch-depth: 0
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '16'
+
+    - name: Check file changes
+      id: check_changes
+      run: |
+        CHANGED_FILES=$(git diff --name-only HEAD^ HEAD)
+        if [ -n "$CHANGED_FILES" ]; then
+          echo "Files changed detected"
+          echo "has_changes=true" >> $GITHUB_OUTPUT
+        else
+          echo "No file changes"
+          echo "has_changes=false" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Install Prettier
+      run: npm install prettier
+
+    - name: Run Prettier
+      if: steps.check_changes.outputs.has_changes == 'true'
+      run: npx prettier --write $(git diff --name-only HEAD^ HEAD)
+
+    - name: Commit changes
+      uses: stefanzweifel/git-auto-commit-action@v4
+      with:
+        commit_message: Apply Prettier formatting
+        branch: ${{ github.head_ref }}
